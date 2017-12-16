@@ -88,7 +88,7 @@ def receive_ping(d_address_list, my_queue):
         if destination_ip in d_address_list:
             packet_id = struct.unpack(HEAD_STRUCT, pack[IP_OFF:PAYLOAD_OF])[3]
             send_time = struct.unpack('d', pack[PAYLOAD_OF:PAYLOAD_OF + timestamp_size])[0]
-            if not [item for item in results[destination_ip] if item[0] == packet_id]:
+            if not [item for item in results[destination_ip] if item[0] == packet_id]:  # Checking for duplicates
                 results[destination_ip].append((packet_id, send_time, recv_time))
 
     my_socket.close()

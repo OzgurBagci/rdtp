@@ -32,9 +32,10 @@ def ping_it(d_address_list, my_socket):
 
     global last_id
 
+    last_id += 1
+
     # Sending Ping Packet to specified destinations.
     for d_address in d_address_list:
-        last_id += 1
         initial_header = bytearray(struct.pack(HEAD_STRUCT, 8, 0, 0, last_id, 1))
         payload = struct.pack("d", time.time())
         my_checksum = checksum(initial_header + payload)
@@ -68,18 +69,13 @@ def receive_ping(d_address_list, my_queue):
         raise Exception('Cannot create ICMP Socket. Please ensure that you are root and try again.')
 
     # In case socket may time out or in non-blocking mode no more data left, we cover it with try-except block.
-    my_address_list = []
     i = 1
-    while d_address_list and time.time() - timeout < start_time and i <= 8:
+    while time.time() - timeout < start_time and i <= 8 * len(d_address_list):
         try:
             my_socket.settimeout(timeout)
             packet = my_socket.recvfrom(64)
             if packet:
                 packets.append((packet[0], time.time()))
-                if i == 8:
-                    my_address_list.append(packet[1][0])
-                    d_address_list.remove(packet[1][0])
-                    i = 0
                 i += 1
         except socket.timeout:
             pass
@@ -89,10 +85,11 @@ def receive_ping(d_address_list, my_queue):
         ip_header = pack[:IP_OFF]
         # The portion that is source IP in IP header processed by 'inet_ntoa'
         destination_ip = socket.inet_ntoa(struct.unpack(IP_STRUCT, ip_header)[8])
-        if destination_ip in my_address_list or destination_ip in d_address_list:
+        if destination_ip in d_address_list:
             packet_id = struct.unpack(HEAD_STRUCT, pack[IP_OFF:PAYLOAD_OF])[3]
             send_time = struct.unpack('d', pack[PAYLOAD_OF:PAYLOAD_OF + timestamp_size])[0]
-            results[destination_ip].append((packet_id, send_time, recv_time))
+            if not [item for item in results[destination_ip] if item[0] == packet_id]:
+                results[destination_ip].append((packet_id, send_time, recv_time))
 
     my_socket.close()
     if results:
@@ -136,7 +133,6 @@ def ping(d_ip_list):
     # Iterates over the results and calculates various characteristics like loss and latency.
     final_results = {}
     for d in d_ip_list:
-        total_ping[d].sort(key=lambda t: t[0])
         unsorted = 0
         avg_ping = 0
         packet_count = 0

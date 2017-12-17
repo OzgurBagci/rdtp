@@ -34,12 +34,14 @@ def ping_it(d_address_list, my_socket):
 
     last_id += 1
 
-    # Sending Ping Packet to specified destinations.
+    # Sends Ping Packet to specified destinations.
+    seq_number = 0
     for d_address in d_address_list:
-        initial_header = bytearray(struct.pack(HEAD_STRUCT, 8, 0, 0, last_id, 1))
+        seq_number += 1
+        initial_header = bytearray(struct.pack(HEAD_STRUCT, 8, 0, 0, last_id, seq_number))
         payload = struct.pack("d", time.time())
         my_checksum = checksum(initial_header + payload)
-        final_header = bytearray(struct.pack(HEAD_STRUCT, 8, 0, my_checksum, last_id, 1))
+        final_header = bytearray(struct.pack(HEAD_STRUCT, 8, 0, my_checksum, last_id, seq_number))
         packet = final_header + payload
         my_socket.sendto(packet, (d_address, 0))
 
@@ -48,10 +50,10 @@ def receive_ping(d_address_list, my_queue):
     """This function receives ping requests to list of IPs specified in the only argument this function takes.
     This function should called as a process coordinated with 'ping_it' function which should be called sync.
 
-    You should wait until processes close for return since it waits at max 16 seconds for the responses and it
+    You should wait until processes close for return since it waits at max 4 seconds for the responses and it
     is a thread."""
 
-    timeout = 16    # Timeout is default and 10 seconds at max. Lesser if received a response from all IPs in the list.
+    timeout = 4    # Timeout is default and 4 seconds at max. Lesser if received a response from all IPs in the list.
     start_time = time.time()
     packets = []
 
@@ -70,17 +72,18 @@ def receive_ping(d_address_list, my_queue):
 
     # In case socket may time out or in non-blocking mode no more data left, we cover it with try-except block.
     i = 1
-    while time.time() - timeout < start_time and i <= 8 * len(d_address_list):
+    while time.time() - timeout < start_time and i <= 64 * len(d_address_list):
         try:
             my_socket.settimeout(timeout)
             packet = my_socket.recvfrom(64)
-            if packet:
+            # Checks for duplicates
+            if packet and not list(filter(lambda x: x[0][IP_OFF:] == packet[0][IP_OFF:], packets)):
                 packets.append((packet[0], time.time()))
                 i += 1
         except socket.timeout:
             pass
 
-    # Unpack received packets and add it to results dictionary.
+    # Unpacks received packets and adds it to results dictionary.
     for pack, recv_time in packets:
         ip_header = pack[:IP_OFF]
         # The portion that is source IP in IP header processed by 'inet_ntoa'
@@ -88,10 +91,14 @@ def receive_ping(d_address_list, my_queue):
         if destination_ip in d_address_list:
             packet_id = struct.unpack(HEAD_STRUCT, pack[IP_OFF:PAYLOAD_OF])[3]
             send_time = struct.unpack('d', pack[PAYLOAD_OF:PAYLOAD_OF + timestamp_size])[0]
-            if not [item for item in results[destination_ip] if item[0] == packet_id]:  # Checking for duplicates
-                results[destination_ip].append((packet_id, send_time, recv_time))
+            results[destination_ip].append((packet_id, send_time, recv_time))
 
     my_socket.close()
+
+    # Removes empty lists in dictionary
+    for key in list(results.keys()):
+        if not results[key]:
+            del results[key]
     if results:
         my_queue.put(results)
 
@@ -114,11 +121,16 @@ def ping(d_ip_list):
     receive_process = Process(target=receive_ping, args=(d_ip_list, results))
     receive_process.start()
     last_id = 0
-    for i in range(8):
+    for i in range(64):
         ping_it(d_ip_list, my_socket)
+        time.sleep(0.01)     # Sleeps in order to give time to receiver process to calculate data
     receive_process.join()
 
     my_socket.close()
+
+    # In order not to do calculations if Queue is empty since it may cause errors.
+    if results.empty():
+        return
 
     # Calculates results based on our query. Dumps it to a list.
     total_ping = {}
@@ -137,15 +149,15 @@ def ping(d_ip_list):
         avg_ping = 0
         packet_count = 0
         for i in range(len(total_ping[d])):
-            if total_ping[d][i][0] - total_ping[d][i-1][0] != 1:
+            if total_ping[d][i][0] < total_ping[d][i-1][0]:
                 unsorted += 1
             avg_ping += total_ping[d][i][1]
             packet_count += 1
-        loss = 8 - packet_count
+        loss = 64 - packet_count
         avg_ping /= packet_count
         avg_ping = int(avg_ping * 1000)    # To convert it from second to millisecond and dump the decimals
-        loss_percent = loss / 8     # Turns Loss into 0.xx format
-        unsorted_percent = (unsorted - 1) / 8     # Turns Unsorted Packages into 0.xx format
+        loss_percent = loss / 64     # Turns Loss into 0.xx format
+        unsorted_percent = (unsorted - 1) / 64     # Turns Unsorted Packages into 0.xx format
 
         final_results[d] = (avg_ping, loss_percent, unsorted_percent)
 

@@ -7,10 +7,10 @@ import struct
 import time
 
 
-IP_STRUCT = '!BBHHHBBH4s4s'     # For struct.pack and struct.unpack functions.
-HEAD_STRUCT = '!BBHHH'  # For struct.pack and struct.unpack functions.
-IP_OFF = 20     # Until IP_OFF it is IP Header.
-PAYLOAD_OF = 28     # Until byte 28 it is IP and ICMP Headers.
+IP_STRUCT = '!BBHHHBBH4s4s'     # For struct.pack and struct.unpack functions
+HEAD_STRUCT = '!BBHHH'  # For struct.pack and struct.unpack functions
+IP_OFF = 20     # Until IP_OFF it is IP Header
+PAYLOAD_OF = 28     # Until byte 28 it is IP and ICMP Headers
 
 last_id = None
 
@@ -51,9 +51,9 @@ def receive_ping(d_address_list, my_queue):
     This function should called as a process coordinated with 'ping_it' function which should be called sync.
 
     You should wait until processes close for return since it waits at max 4 seconds for the responses and it
-    is a thread."""
+    is running parallel to main process."""
 
-    timeout = 4    # Timeout is default and 4 seconds at max. Lesser if received a response from all IPs in the list.
+    timeout = 4    # Timeout is default and 4 seconds at max. Lesser if received a response from all IPs in the list
     start_time = time.time()
     packets = []
 
@@ -95,7 +95,7 @@ def receive_ping(d_address_list, my_queue):
 
     my_socket.close()
 
-    # Removes empty lists in dictionary
+    # Removes empty lists in dictionary.
     for key in list(results.keys()):
         if not results[key]:
             del results[key]
@@ -134,24 +134,25 @@ def ping(d_ip_list):
 
     # Calculates results based on our query. Dumps it to a list.
     total_ping = {}
-    for d in d_ip_list:
-        total_ping[d] = []
     while not results.empty():
         result = results.get()
-        for d in d_ip_list:
+        for d in result.keys():
+            total_ping[d] = []
             for res in result[d]:
                 total_ping[d].append((res[0], res[2] - res[1]))
 
     # Iterates over the results and calculates various characteristics like loss and latency.
     final_results = {}
-    for d in d_ip_list:
+    for d in total_ping.keys():
         unsorted = 0
         avg_ping = 0
         packet_count = 0
+        mad_max = 0     # Reference to the movie Mad Max, Maximum Latency
         for i in range(len(total_ping[d])):
             if total_ping[d][i][0] < total_ping[d][i-1][0]:
-                unsorted += 1
+                unsorted += 1   # A naive implementation for approximating what is the condition of sorting on link
             avg_ping += total_ping[d][i][1]
+            mad_max = max(mad_max, int(total_ping[d][i][1] * 1000))     # Converts Max Latency to ms
             packet_count += 1
         loss = 64 - packet_count
         avg_ping /= packet_count
@@ -159,6 +160,6 @@ def ping(d_ip_list):
         loss_percent = loss / 64     # Turns Loss into 0.xx format
         unsorted_percent = (unsorted - 1) / 64     # Turns Unsorted Packages into 0.xx format
 
-        final_results[d] = (avg_ping, loss_percent, unsorted_percent)
+        final_results[d] = (avg_ping, mad_max, loss_percent, unsorted_percent)
 
     return final_results

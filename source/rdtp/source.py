@@ -12,8 +12,6 @@ HEADER_STRUCT = '!BBHHHI'   # For struct.pack and struct.unpack functions
 def send_rdtp(d_hostname, data):
     my_socket = get_socket()
 
-
-
 def configure(d_ip_list):
     """Using 'pinger' configures Window Size, decides on Bulk ACK, Timeout and if decided on Bulk ACK, ACK Window.
     Takes one argument which is a list of Destination IPs.
@@ -21,7 +19,6 @@ def configure(d_ip_list):
     Note that the function calls some functions in which multiprocessing is used."""
 
     values = ping(d_ip_list)
-
 
 def connect(d_host, my_socket):
     pass    # TODO: Establish connection with destination

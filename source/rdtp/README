@@ -1,0 +1,31 @@
+
+
+The method below is followed while creating the configuration of link out of pings (demonstrated for 2 links, may be
+used for more than 2 links in implementation):
+
+- To get the most out of multiple links packets divided into these links by the equation "a/b = (y+100)/(x+100)" where
+a and b represents the portion of total data divided to Link 1 and Link 2. The y and x represents loss percent of
+Link 2 and Link 1. In the case that one of the links' packet loss is 100% only 1 line will be used. This configuration
+is applied when the links' latency is the same.
+
+- If latency is different from one link to another formula is further developed into "a/b = n*(y+100)/m*(x+100)" where
+the n and m are latency for Link 2 and Link 1. The rest is the same as first formula.
+
+- Timeout carefully calculated and it is found that there exists a function of loss which can be used to calculate best
+timeout value. Since it requires lots of computation power the results divided into chunks which are the following in
+which mad_max represents maximum value of latency that is derived from ping:
++ loss > 12%        1*mad_max ms
++ 12% >= loss > 6%  2*mad_max ms
++ 6% >= loss > 4%   3*mad_max ms
++ 4% >= loss > 3%   4*mad_max ms
++ 3% >= loss > 2%   5*mad_max ms
++ 2% >= loss > 1%   7*mad_max ms
++ 1% >= loss        9*mad_max ms
+
+- Bulk size is calculated as a function of loss. Bulk size represents sending data in chunks and receiving only one ACK
+for the chunk. The formula is the following: "round(10/x^(1/2))" where x represents loss as percent and round represents
+mathematical round. Mathematical round rounds the float to upper integer if its decimal part is bigger than or equal
+to 5, otherwise rounds to lower integer.
+
+- As a result of calculations it is decided that the window size does not really matter for performance and since it is
+16-bit unsigned integer and ACK Window is 8-bit unsigned integer, the Window Size is square of ACK Window Size.

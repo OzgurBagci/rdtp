@@ -157,8 +157,8 @@ def ping(d_ip_list):
         loss = 64 - packet_count
         avg_ping /= packet_count
         avg_ping = int(avg_ping * 1000)    # To convert it from second to millisecond and dump the decimals
-        loss_percent = loss / 64     # Turns Loss into 0.xx format
-        unsorted_percent = (unsorted - 1) / 64     # Turns Unsorted Packages into 0.xx format
+        loss_percent = (loss / 64) * 100    # Turns Loss into 0.xx format
+        unsorted_percent = ((unsorted - 1) / 64) * 100   # Turns Unsorted Packages into 0.xx format
 
         final_results[d] = (avg_ping, mad_max, loss_percent, unsorted_percent)
 

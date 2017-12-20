@@ -20,32 +20,35 @@ def resolve_hostname(hostname):
     destination_routes = []
     for data in destination_ips:
         destination_routes.append({list(data.keys())[0]: list(data.values())[0]})
-    destination_ips = [list(x.keys())[0] for x in destination_ips]
-
-    print(destination_routes)
 
     final_destination_routes = {}
     resolve_helper(final_destination_routes, my_data, destination_routes)
+
+    # Removes possible duplicates when multiple routes start from one route or opposite.
+    for route in list(final_destination_routes.keys()):
+        final_destination_routes[route] = list(set(final_destination_routes[route]))
 
     return final_destination_routes  # Returns a dictionary, key is the destination, value is the interface
 
 
 def resolve_helper(final, my_data, destination_routes):
-    """Loops until there is no reference from value to key which means value is the interface that will be used."""
+    """Loops until there is no reference from value to key which means value is the interface that will be used.
+    It is a recursive function. Since this is a general purpose program every case is considered. Multiple interfaces
+    may be connected to multiple routers for example."""
 
     for element in destination_routes:
         my_key = list(element.keys())[0]
         my_values = element[my_key]
-        print(my_values)
         try:
             new_route = [x for x in my_data if list(x.keys())[0] == my_values][0][my_values]
-            print(new_route, "\n")
             new_routes = []
             for data in new_route:
                 new_routes.append({my_key: list(data.values())[0]})
             resolve_helper(final, my_data, new_routes)
         except (KeyError, IndexError):
             try:
-                final[my_key].append(list(destination_routes[0].values())[0])
+                for route in list(destination_routes):
+                    final[my_key].append(list(route.values())[0])
             except KeyError:
-                final[my_key] = [list(destination_routes[0].values())[0]]
+                for route in list(destination_routes):
+                    final[my_key] = [list(route.values())[0]]

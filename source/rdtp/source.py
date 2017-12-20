@@ -15,7 +15,12 @@ HEADER_STRUCT = '!BBHHHI'   # For struct.pack and struct.unpack functions
 
 def send_rdtp(d_hostname, data):
     my_socket = get_socket()
-    resolve_hostname(data)
+    d_dict = resolve_hostname(data)
+
+    d_ip_list = []
+    for d_ip in list(d_dict.keys()):
+        d_ip_list.append(d_ip)
+    configuration = configure(d_ip_list)
 
 
 def configure(d_ip_list):
@@ -80,7 +85,7 @@ def configure(d_ip_list):
     return packet_quantity, bulk_size, window_size, timeout
 
 
-def connect(d_host, my_socket):
+def connect(d_host, my_socket, configuration):
     pass    # TODO: Establish connection with destination
 
 

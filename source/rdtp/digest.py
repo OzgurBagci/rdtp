@@ -1,7 +1,7 @@
 """Whole purpose of this script is to convert the input to binary format. In order to do that one need to specify
 if it is a file or string.
 
-It is a separate script because it may grow into something bigger if the implementation become complicated."""
+It is a separate script because it may grow into something bigger if the implementation becomes complicated."""
 
 
 def digest(input_data, is_file, portion):

@@ -3,6 +3,7 @@ import time
 import hashlib
 from math import sqrt
 from fractions import Fraction
+from .resolver import resolve_hostname
 from .pinger import ping
 from .udp import *
 
@@ -84,6 +85,3 @@ def connect(d_host, my_socket):
 
 def disconnect(d_host, my_socket):
     pass    # TODO: End connection with destination
-
-def resolve_hostname(hostname):
-    pass    # TODO: Resolve hostname using Routing Table

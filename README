@@ -1,4 +1,17 @@
+USAGE
 
+TODO: Write down how to use it.
+
+
+ROUTING FILE
+
+Routing file is a JSON Array of objects which have the key of the host. Values of keys are lists of objects that's key
+is destination and value is route should be used or the interface should be used. We did not provide a way to modify
+routing table but since it is a well-known file, a JSON File, it can be implemented by user according to his/her usage
+case.
+
+
+CONFIGURATION
 
 The method below is followed while creating the configuration of link out of pings (demonstrated for 2 links, may be
 used for more than 2 links in implementation):

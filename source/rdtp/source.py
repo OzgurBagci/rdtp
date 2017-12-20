@@ -15,6 +15,7 @@ HEADER_STRUCT = '!BBHHHI'   # For struct.pack and struct.unpack functions
 
 def send_rdtp(d_hostname, data):
     my_socket = get_socket()
+    resolve_hostname(data)
 
 
 def configure(d_ip_list):

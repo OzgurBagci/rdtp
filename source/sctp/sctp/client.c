@@ -11,7 +11,16 @@
 #include <netdb.h>
 #include <unistd.h>
 
-int main(int argv, char args[], char filename[]) {
+int main(int argc, char *argv[]) {
+
+	if (argc != 3)
+	{
+		return -1;
+	}
+
+	char *args = argv[1];
+
+	char *filename = argv[2];
 
 	if (filename == "" || args == "") return -1;
 
@@ -34,15 +43,15 @@ int main(int argv, char args[], char filename[]) {
 	hints.ai_flags = AI_ADDRCONFIG | AI_V4MAPPED;
 
 	
-	char running[512]; 
+	char running[512];
 	strncpy(running, args, strlen(args));
-	while (running != "")
+	running[strlen(args)] = '\0';
+	char * token = strtok(running, ":");
+	while (token != NULL)
 	{
-		char * token = strtok(running, ":");
 		getaddrinfo(token, "1234", &hints, &res);
+		token = strtok(NULL, ":");
 	}
-	
-	
 
 	struct sockaddr_storage *connect = NULL;
 	int cc = 0, count = 0;
@@ -64,16 +73,16 @@ int main(int argv, char args[], char filename[]) {
 	FILE *myfile = fopen(filename, "rb");
 	if(myfile != NULL)
 	{
-		while((bytesRead = fread(buffer, sizeof(buffer), 1, myfile)) > 0)
+		memset(&buffer, '\0', sizeof(buffer));
+		while((bytesRead = fread(buffer, 1, sizeof(buffer), myfile)) > 0)
 		{
 			sctp_sendmsg(sock, (void*)buffer, (size_t)strlen(buffer), NULL, 0, 0, 0, 0, 0, 0);
 		}
 	}
 	fclose(myfile);
-	char *endmessage = (char*) malloc(sizeof(char) * 2);
-	endmessage[0] = EOF;
-	endmessage[1] = '\0';
-	sctp_sendmsg(sock, (void*)endmessage, (size_t)strlen(endmessage), NULL, 0, 0, 0, 0, 0, 0);
+	memset(&buffer, '\0', sizeof(buffer));
+	buffer[0] = EOF;
+	if (feof(myfile)) sctp_sendmsg(sock, (void*)buffer, (size_t)strlen(buffer), NULL, 0, 0, 0, 0, 0, 0);
 	close(sock);
 	
 	return 0;

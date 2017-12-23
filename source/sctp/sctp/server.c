@@ -1,4 +1,4 @@
-#include <sys/types.h>
+﻿#include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <netinet/sctp.h>
@@ -10,7 +10,15 @@
 #include <netdb.h>
 #include <unistd.h>
 
-int main(int argv, char args[]){
+int main(int argc, char *argv[]){
+
+	if (argc != 2)
+	{
+		return -1;
+	}
+
+	char *args = argv[1];
+
 	struct sockaddr_in client;
 	int sock;
 	if((sock = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP)) == -1){
@@ -30,10 +38,12 @@ int main(int argv, char args[]){
 	hints.ai_flags = AI_ADDRCONFIG | AI_V4MAPPED;
 	char running[512];
 	strncpy(running, args, strlen(args));
-	while (running != "")
+	running[strlen(args)] = '\0';
+	char * token = strtok(running, ":");
+	while (token != NULL)
 	{
-		char * token = strtok(running, ":");
 		getaddrinfo(token, "1234", &hints, &res);
+		token = strtok(NULL, ":");
 	}
 
 	struct sockaddr_storage *connect = NULL;
@@ -56,20 +66,25 @@ int main(int argv, char args[]){
 	if((newsock = accept(sock, (struct sockaddr*)&client, &clnlen)) == -1){
 		return -1;
 	}
-	bzero((void*)&buffer, sizeof(buffer));
-	struct sctp_sndrcvinfo sndrcvinf;
-	if (sctp_recvmsg(newsock, (void*)buffer, sizeof(buffer), (struct sockaddr*)NULL, 0, &sndrcvinf, &flags) == -1) {
-		return -1;
+
+	while(1)
+	{
+		memset(&buffer, '\0', sizeof(buffer));
+		struct sctp_sndrcvinfo sndrcvinf;
+		sctp_recvmsg(newsock, (void*)buffer, sizeof(buffer), (struct sockaddr*)NULL, 0, &sndrcvinf, &flags);
+		if (buffer[0] != '\0') break;
 	}
-	FILE *myfile = fopen(buffer, "ab+");
+	FILE *myfile = fopen(buffer, "wb");
 	while(1){
-		bzero((void*)&buffer, sizeof(buffer));
+		memset(&buffer, '\0', sizeof(buffer));
 		struct sctp_sndrcvinfo sndrcvinfo;
-		if(sctp_recvmsg(newsock, (void*)buffer, sizeof(buffer), (struct sockaddr*)NULL, 0, &sndrcvinfo, &flags) == -1){
-			return -1;
-		}
-		fwrite(&buffer, sizeof(buffer), 1, myfile);
-		if (buffer[strlen(buffer) - 1] == EOF) break;
+		sctp_recvmsg(newsock, (void*)buffer, sizeof(buffer), (struct sockaddr*)NULL, 0, &sndrcvinfo, &flags);
+		if (buffer[strlen(buffer) - 1] == EOF)
+		{
+			fwrite(&buffer, 1, (strlen(buffer) - 1) * sizeof(char), myfile);
+			break;
+		};
+		fwrite(&buffer, 1, strlen(buffer) * sizeof(char), myfile);
 	}
 	fclose(myfile);
 	close(newsock);

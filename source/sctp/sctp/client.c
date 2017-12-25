@@ -69,14 +69,13 @@ int main(int argc, char *argv[]) {
 
 	sctp_sendmsg(sock, (void*)myfilename, (size_t)strlen(myfilename), NULL, 0, 0, 0, 0, 0, 0);
 	unsigned char buffer[512];
-	size_t bytesRead = 0;
 	FILE *myfile = fopen(filename, "rb");
 	if(myfile != NULL)
 	{
-		memset(&buffer, '\0', sizeof(buffer));
-		while((bytesRead = fread(buffer, 1, sizeof(buffer), myfile)) > 0)
+		while((fgets(buffer, 512, myfile)) != NULL)
 		{
 			sctp_sendmsg(sock, (void*)buffer, (size_t)strlen(buffer), NULL, 0, 0, 0, 0, 0, 0);
+			memset(&buffer, '\0', sizeof(buffer));
 		}
 	}
 	fclose(myfile);

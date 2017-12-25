@@ -79,12 +79,8 @@ int main(int argc, char *argv[]){
 		memset(&buffer, '\0', sizeof(buffer));
 		struct sctp_sndrcvinfo sndrcvinfo;
 		sctp_recvmsg(newsock, (void*)buffer, sizeof(buffer), (struct sockaddr*)NULL, 0, &sndrcvinfo, &flags);
-		if (buffer[strlen(buffer) - 1] == EOF)
-		{
-			fwrite(&buffer, 1, (strlen(buffer) - 1) * sizeof(char), myfile);
-			break;
-		};
-		fwrite(&buffer, 1, strlen(buffer) * sizeof(char), myfile);
+		if (buffer[strlen(buffer) - 1] == EOF) break;
+		if (buffer[0] != '\0') fputs(buffer, myfile);
 	}
 	fclose(myfile);
 	close(newsock);

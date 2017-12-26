@@ -1,4 +1,5 @@
 import socket
+from time import time
 
 
 def get_socket():
@@ -17,5 +18,21 @@ def send_udp(my_socket, d_ip, d_port, data):
 
     try:
         my_socket.sendto(data, (d_ip, d_port))
+        return True
     except socket.error:
-        raise Exception('Cannot send UDP Packet. Please ensure that you are root and try again.')
+        return False
+
+
+def receive_udp(my_socket, s_port):
+    """Receives UDP Package from source. If it does not receive a packet until default timeout it returns False. Takes
+    socket as first argument and Source Port as second argument."""
+
+    try:
+        time_end = time() + 10  # Sets the timeout and lets while loop run until timeout
+        while time() < time_end:
+            packet = my_socket.recvfrom(1000)
+            if packet[1][1] != s_port:
+                continue
+            return packet
+    except socket.error:
+        return False

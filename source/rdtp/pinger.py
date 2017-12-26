@@ -75,8 +75,8 @@ def receive_ping(d_address_list, my_queue):
     while time.time() - timeout < start_time and i <= 64 * len(d_address_list):
         try:
             my_socket.settimeout(timeout)
-            packet = my_socket.recvfrom(64)
-            # Checks for duplicates
+            packet = my_socket.recvfrom(64)     # Buffer size set to 64 bits since it is a small packet
+            # Checks for duplicates.
             if packet and not list(filter(lambda x: x[0][IP_OFF:] == packet[0][IP_OFF:], packets)):
                 packets.append((packet[0], time.time()))
                 i += 1
@@ -122,15 +122,15 @@ def ping(d_ip_list):
     receive_process.start()
     last_id = 0
     for i in range(64):
-        ping_it(d_ip_list, my_socket)
         time.sleep(0.01)     # Sleeps in order to give time to receiver process to calculate data
+        ping_it(d_ip_list, my_socket)
     receive_process.join()
 
     my_socket.close()
 
     # In order not to do calculations if Queue is empty since it may cause errors.
     if results.empty():
-        return
+        return {}
 
     # Calculates results based on our query. Dumps it to a list.
     total_ping = {}
@@ -152,13 +152,13 @@ def ping(d_ip_list):
             if total_ping[d][i][0] < total_ping[d][i-1][0]:
                 unsorted += 1   # A naive implementation for approximating what is the condition of sorting on link
             avg_ping += total_ping[d][i][1]
-            mad_max = max(mad_max, int(total_ping[d][i][1] * 1000))     # Converts Max Latency to ms
+            mad_max = max(mad_max, round(total_ping[d][i][1] * 1000))     # Converts Max Latency to ms
             packet_count += 1
         loss = 64 - packet_count
         avg_ping /= packet_count
-        avg_ping = int(avg_ping * 1000)    # To convert it from second to millisecond and dump the decimals
-        loss_percent = (loss / 64) * 100    # Turns Loss into 0.xx format
-        unsorted_percent = ((unsorted - 1) / 64) * 100   # Turns Unsorted Packages into 0.xx format
+        avg_ping = round(avg_ping * 1000)    # To convert it from second to millisecond and dump the decimals
+        loss_percent = (loss / 64) * 100    # Turns Loss into x% format
+        unsorted_percent = ((unsorted - 1) / 64) * 100   # Turns Unsorted Packages into x% format
 
         final_results[d] = (avg_ping, mad_max, loss_percent, unsorted_percent)
 

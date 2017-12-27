@@ -1,5 +1,6 @@
-import struct
-import time
+""""""
+
+from multiprocessing import Process, Queue
 from math import sqrt
 from fractions import Fraction
 from .resolver import resolve_hostname
@@ -26,15 +27,57 @@ def send_rdtp(d_hostname, data):
 
     configuration = configure(d_ip_list)
 
-    # Does connection attempts to all IPs of the destination.
-    will_remove = []
+    connection_list = d_ip_list
+    # Removes IPs with 0 packet share assigned from connection and disconnection list.
     for i in range(len(d_ip_list)):
-        if not connect(d_ip_list[i], my_socket, tuple([x[i] for x in configuration])):
-            will_remove.append(d_ip_list[i])
+        if configuration[0][i] == 0:
+            del connection_list[i]
 
-    d_ip_list = filter(lambda x: x not in will_remove, d_ip_list)   # Removes IPs with connection attempt failed
+    d_ip_list = connection_list
 
-    
+    # Does connection attempts to all IPs of the destination.
+    connection_list = []
+    results = Queue()
+    for i in range(len(d_ip_list)):
+        receive_process = Process(target=wait_response, args=(connection_list, results))
+        receive_process.start()
+        for i in range(3):  # 3 connection attempts at max
+            if connect(d_ip_list[i], my_socket, tuple([x[i] for x in configuration])):
+                receive_process.join()
+                ok_break = False
+                while not results.empty():
+                    result = results.get()
+                    if result[1] == d_ip_list[i] and (result[0][0] >> 1) - (result[0][0] >> 2) * 2 == 1 and \
+                                            (result[0][0] >> 4) - (result[0][0] >> 5) * 2 == 1:
+                        connection_list.append(d_ip_list[i])
+                        ok_break = True
+                        break
+                if ok_break:
+                    break
+
+    configuration = configure(connection_list)    # In case an IP is removed reconfigure the links
+    d_ip_list = connection_list
+
+    # TODO: Implement sending data
+
+    # Does connection attempts to all IPs of the destination.
+    for i in range(len(d_ip_list)):
+        receive_process = Process(target=wait_response, args=(connection_list, results))
+        receive_process.start()
+        for i in range(3):  # 3 disconnection attempts at max
+            if disconnect(d_ip_list[i], my_socket, tuple([x[i] for x in configuration])):
+                receive_process.join()
+                ok_break = False
+                while not results.empty():
+                    result = results.get()
+                    # If disconnect fails 3 times it is assumed that host is down else it breaks in order not to do
+                    # unnecessary calculations.
+                    if result[1] == d_ip_list[i] and (result[0][0] >> 3) - (result[0][0] >> 4) * 2 == 1 and \
+                                            (result[0][0] >> 4) - (result[0][0] >> 5) * 2 == 1:
+                        ok_break = True
+                        break
+                if ok_break:
+                    break
 
 
 def configure(d_ip_list):
@@ -48,7 +91,10 @@ def configure(d_ip_list):
     values = ping(d_ip_list)
     tmp = []
     for d in d_ip_list:
-        tmp.append(values[d])
+        try:
+            tmp.append(values[d])
+        except KeyError:    # Appends 100% loss if no ping info is received from that IP, excludes that IP
+            tmp.append((4001, 4001, 100, 0))    # ms is 4001 since it waits 4 seconds
     values = tmp
 
     bulk_size = []
@@ -65,6 +111,8 @@ def configure(d_ip_list):
         m = values[i][0]
         y = values[i + 1][2]
         n = values[i + 1][0]
+        if x == 100:    # If loss is 100% in 2nd one, makes ms 0 in 1st one in order not to give any packet to 2nd line
+            n = 0
         a_divided_b = Fraction(n * (100 + y)) / Fraction(m * (100 + x))
         if not packet_quantity:
             packet_quantity.append(a_divided_b.numerator)
@@ -136,15 +184,18 @@ def disconnect(d_host, my_socket, configuration):
     return send_udp(my_socket, d_host, SOCKET_NUMBER, data)
 
 
-def wait_response(d_ip_list):
+def wait_response(d_ip_list, my_queue):
     """Should run as a thread. Returns unpacked headers. It must be noted it is for receiving responses to data sent
     only and because of it, this function does not return data. Only argument it takes is the IP List of Destination."""
 
     m_socket = get_socket()
+    m_socket.settimeout(4)
     result = receive_udp(m_socket, SOCKET_NUMBER)
-    if not result:
-        return False
+    if result is None:
+        return
     data, addr = result
     if addr[0] in d_ip_list:
-        data = struct.unpack(HEADER_STRUCT, data[:HEADER_SIZE])     # Takes the header and unpacks it
-        return data
+        unpacked_data = struct.unpack(HEADER_STRUCT, data[:HEADER_SIZE])     # Takes the header and unpacks it
+        if checksum(data) == unpacked_data[5] and unpacked_data[0] - (unpacked_data[0] >> 1) * 2 == \
+                        unpacked_data[5] % 2:
+            my_queue.add(unpacked_data, addr[0])

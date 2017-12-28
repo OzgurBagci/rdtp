@@ -1,4 +1,4 @@
-""""""
+# TODO: Script definition
 
 from multiprocessing import Process, Queue
 from math import sqrt
@@ -17,8 +17,10 @@ SOCKET_NUMBER = 1111    # Preferred UDP Port
 
 
 def send_rdtp(d_hostname, data):
+    # TODO: Function definition
+
     my_socket = get_socket()
-    d_dict = resolve_hostname(data)
+    d_dict = resolve_hostname(d_hostname)
 
     # Gets IP List from dictionary.
     d_ip_list = []

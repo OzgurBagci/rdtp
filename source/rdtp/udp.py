@@ -1,4 +1,4 @@
-""""""
+# TODO: Script definition
 
 import socket
 from time import time

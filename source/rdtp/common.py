@@ -34,6 +34,7 @@ def checksum(packet):
     initial_header = create_header(initial_bool, unpacked_header[1], unpacked_header[2], unpacked_header[3],
                                    unpacked_header[4], 0)
     initial_packet = initial_header + bytes_data
+
     hash4 = blake2b(digest_size=4)     # Uses built in blake2b Hash with 4 byte digest size
     hash4.update(initial_packet)
     return int(hash4.hexdigest(), 16)  # Returns an integer since it is needed for 'struct.pack'

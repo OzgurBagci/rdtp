@@ -1,7 +1,20 @@
+Note: Some todos remaining. No reports could be prepared.
+
+2262137 - Ozgur Bagci - Section 1
+
 USAGE
 
-TODO: Write down how to use it.
+Become root.
 
+Run install.sh script.
+
+For RDTP call '/usr/local/bin/destination' and '/usr/local/bin/source_t' accordingly. Then run "find . -name time.txt"
+for output of 100 tests. You need to put input.txt to current working directory before calling the functions.
+
+For SCTP run ./resource/client.o 'IP1:IP2' 'filename' and ./resource/server.o 'IP1:IP2' accordingly without 's. You can
+modify source.sctp.sctp.timer module before running 'install.sh' and use it for timing calculations.
+
+For more info please contact : e2262137@ceng.metu.edu.tr
 
 ROUTING FILE
 

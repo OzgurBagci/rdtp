@@ -15,4 +15,8 @@ def digest(input_data, is_file, portion):
     else:
         data = input_data.encode()
 
-    return [data[i:i+2] for i in range(0, len(data), 2 * portion)]  # Every 2 characters in b' string is a byte
+    # Every 2 characters in b' string is a byte
+    if is_file:
+        return [input_data.encode()] + [data[i:i+2*portion] for i in range(0, len(data), 2 * portion)]
+    else:
+        return [data[i:i+2 * portion] for i in range(0, len(data), 2 * portion)]
